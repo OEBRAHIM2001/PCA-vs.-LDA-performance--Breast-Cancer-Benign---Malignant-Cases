@@ -1,0 +1,173 @@
+---
+title: "PCA vs. LDA performance for Breast Cancer Benign & Malignant Cases"
+author: "Omar Ebrahim"
+date: "2023-12-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# STEP 1: Acquiring The Data
+```{r}
+library(readr)
+breastCancer <- read_csv("BreastCancerWisconsin.csv")
+# Making sure there are no spaces for column header names so it works with R.
+colnames(breastCancer)[10] ="concave_points_mean"
+View(breastCancer)
+```
+# STEP 2: Visualizing the Data
+# A) The Dependant Feature
+```{r}
+#install.packages(ggplot2)
+library(ggplot2)
+
+breastCancer$diagnosis <- factor(breastCancer$diagnosis, levels = c("B", "M"))
+
+ggplot(breastCancer, aes(x = diagnosis, fill = diagnosis)) +
+  geom_bar(color = "black", fill = c("darkgreen", "darkred")) +
+  labs(title = "Diagnosis Distribution", x = "Diagnosis", y = "Count") +
+  theme_minimal()
+
+# Here we notice that the total Benign cases are almost double the cases of Malignant cases.
+```
+# B) The Independant Features
+```{r}
+# Splitting the dataset so we only deal with numerical features when visualizing the boxplot.
+numericalFeatures <- names(breastCancer[, -c(1, 2)])
+numericalFeatures
+```
+
+
+```{r}
+library(ggplot2)
+
+for (feature in numericalFeatures) {
+  p <- ggplot(breastCancer, aes_string(x = "diagnosis", y = feature, fill = "diagnosis")) +
+    geom_boxplot() +
+    labs(title = paste("Boxplot for", feature),
+         x = "Diagnosis",
+         y = feature) +
+    theme_minimal()
+  
+  print(p)
+}
+```
+```{r}
+
+for (feature in numericalFeatures) {
+  hist_data <- breastCancer[[feature]]
+  hist_title <- paste("Histogram of", feature)
+  
+  hist(hist_data, col = "lightblue", main = hist_title, xlab = feature)
+}
+
+```
+
+```{r}
+# Converting M and B to numerical values for classification where benign=0 and malignant = 1  
+breastCancer$diagnosis<-factor(breastCancer$diagnosis,labels = c(0,1))
+```
+
+```{r}
+breastCancer_noid<-breastCancer[,c(-1)]
+breastCancer_noid
+```
+
+```{r}
+attach(breastCancer_noid)
+```
+
+```{r}
+# png display the plot details 
+png('C:\\Users\\karee\\Downloads\\R_output\\my_plot.png',width = 2000,height=2000)
+library(ggplot2)
+ggpairs(breastCancer_noid)
+
+```
+
+```{r}
+#applying PCA on our dataset
+pca.BC <- princomp(breastCancer_noid[,-1],cor=T)
+summary(pca.BC,loadings=T,cutoff=F)
+
+```
+
+```{r}
+plot(1:(length(pca.BC$sdev)),  (pca.BC$sdev)^2, type='b', 
+     main="Scree Plot", xlab="Number of Components", ylab="Eigenvalue Size")
+
+```
+```{r}
+library(scatterplot3d)
+
+# Assuming 'pca.BC' is your PCA object
+
+# Extract principal components
+pc1 <- pca.BC$scores[, 1]
+pc2 <- pca.BC$scores[, 2]
+pc3 <- pca.BC$scores[, 3]
+
+loadings <- pca.BC$rotation
+# Create a vector of colors based on the 'diagnosis' variable
+colors <- ifelse(diagnosis == 1, "red", "blue")
+scatterplot3d(x = pc1, y = pc2, z = pc3, main = "3D Principal Components with Loadings", 
+              xlab = "PC1", ylab = "PC2", zlab = "PC3",
+              color = colors, pch = 16)
+```
+
+
+
+```{r}
+# Testing the normality of the data of the 2 groups in the data
+chisplot <- function(x) {
+  if (!is.matrix(x)) stop("x is not a matrix")
+  
+  ### determine dimensions
+  n <- nrow(x)
+  p <- ncol(x)
+  #
+  xbar <- apply(x, 2, mean)
+  S <- var(x)
+  S <- solve(S,tol=1e-40)
+  index <- (1:n)/(n+1)
+  #
+  xcent <- t(t(x) - xbar)
+  di <- apply(xcent, 1, function(x,S) x %*% S %*% x,S)
+  #
+  quant <- qchisq(index,p)
+  plot(quant, sort(di), ylab = "Ordered distances",
+       xlab = "Chi-square quantile", lwd=2,pch=1)
+  
+}
+par(mfrow=c(1,2))
+chisplot(as.matrix(breastCancer_noid[diagnosis==0,-1]))
+abline(0,1,col=2)
+chisplot(as.matrix(breastCancer_noid[diagnosis==1,-1]))
+abline(0,1,col=2)
+#normality assumption is not valid
+```
+
+```{r}
+library(biotools)  
+boxM(breastCancer_noid[,-1],diagnosis) 
+#p-value is less than 0.05 then the two covariances are equal then both of our assumptions are not valid which may result in inaccurate outcomes
+```
+
+```{r}
+
+library(MASS)
+LDA <- lda(diagnosis ~ radius_mean + texture_mean + perimeter_mean + area_mean + smoothness_mean + compactness_mean + concavity_mean +
+    concave_points_mean + symmetry_mean + fractal_dimension_mean, data=breastCancer_noid,)
+
+LDA
+```
+```{r}
+group<-predict(LDA, breastCancer_noid, method='plug-in')$class
+table(group,breastCancer_noid$diagnosis)
+```
+#then our correct classification rate is (534/569) * 100= 93.8% 
+#and our misclassification rate is equal to (35/569)*100 = 6.2%
+
+
