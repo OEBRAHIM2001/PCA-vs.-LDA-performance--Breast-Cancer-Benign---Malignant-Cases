@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # STEP 1: Acquiring The Data
+
 ```{r}
 library(readr)
 breastCancer <- read_csv("BreastCancerWisconsin.csv")
@@ -17,8 +18,11 @@ breastCancer <- read_csv("BreastCancerWisconsin.csv")
 colnames(breastCancer)[10] ="concave_points_mean"
 View(breastCancer)
 ```
+
 # STEP 2: Visualizing the Data
+
 # A) The Dependant Feature
+
 ```{r}
 #install.packages(ggplot2)
 library(ggplot2)
@@ -32,13 +36,14 @@ ggplot(breastCancer, aes(x = diagnosis, fill = diagnosis)) +
 
 # Here we notice that the total Benign cases are almost double the cases of Malignant cases.
 ```
+
 # B) The Independant Features
+
 ```{r}
 # Splitting the dataset so we only deal with numerical features when visualizing the boxplot.
 numericalFeatures <- names(breastCancer[, -c(1, 2)])
 numericalFeatures
 ```
-
 
 ```{r}
 library(ggplot2)
@@ -54,6 +59,7 @@ for (feature in numericalFeatures) {
   print(p)
 }
 ```
+
 ```{r}
 
 for (feature in numericalFeatures) {
@@ -80,10 +86,15 @@ attach(breastCancer_noid)
 ```
 
 ```{r}
-# png display the plot details 
-png('C:\\Users\\karee\\Downloads\\R_output\\my_plot.png',width = 2000,height=2000)
+# Load necessary libraries
 library(ggplot2)
+library(GGally)
+
+# Specify the path and dimensions for the output PNG file
+png("C:\\Users\\Omar\\OneDrive\\Desktop\\OMAR\\WORK\\Data Visualization\\Project\\my_plot.png", width = 2000, height = 2000)
 ggpairs(breastCancer_noid)
+
+dev.off()
 
 ```
 
@@ -99,6 +110,7 @@ plot(1:(length(pca.BC$sdev)),  (pca.BC$sdev)^2, type='b',
      main="Scree Plot", xlab="Number of Components", ylab="Eigenvalue Size")
 
 ```
+
 ```{r}
 library(scatterplot3d)
 
@@ -116,8 +128,6 @@ scatterplot3d(x = pc1, y = pc2, z = pc3, main = "3D Principal Components with Lo
               xlab = "PC1", ylab = "PC2", zlab = "PC3",
               color = colors, pch = 16)
 ```
-
-
 
 ```{r}
 # Testing the normality of the data of the 2 groups in the data
@@ -152,7 +162,7 @@ abline(0,1,col=2)
 ```{r}
 library(biotools)  
 boxM(breastCancer_noid[,-1],diagnosis) 
-#p-value is less than 0.05 then the two covariances are equal then both of our assumptions are not valid which may result in inaccurate outcomes
+#p-value is less than 0.05 then the two co-variances are equal. Both of our assumptions are not valid which may result in inaccurate outcomes
 ```
 
 ```{r}
@@ -163,11 +173,11 @@ LDA <- lda(diagnosis ~ radius_mean + texture_mean + perimeter_mean + area_mean +
 
 LDA
 ```
+
 ```{r}
 group<-predict(LDA, breastCancer_noid, method='plug-in')$class
 table(group,breastCancer_noid$diagnosis)
 ```
-#then our correct classification rate is (534/569) * 100= 93.8% 
-#and our misclassification rate is equal to (35/569)*100 = 6.2%
 
-
+# Correct classification rate is (534/569) \* 100= 93.8% 
+# Misclassification rate is equal to (35/569)\*100 = 6.2%
